@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>論理表現Ⅰ 熟語クイズ</title>
+<style>
+body{
+    font-family:sans-serif;
+    text-align:center;
+    background:#FFF6FB;
+    margin:0;
+}
+
+h1{
+    background:#FFD6EC;
+    padding:15px;
+    margin:0;
+}
+
+.screen{
+    margin-top:30px;
+}
+
+button{
+    padding:10px 20px;
+    margin:10px;
+    border:none;
+    border-radius:15px;
+    background:#CDE7FF;
+    font-size:16px;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#B5DBFF;
+}
+
+.choice{
+    display:block;
+    width:60%;
+    margin:10px auto;
+    background:#D5FFD9;
+}
+
+#timer{
+    font-size:20px;
+    margin:15px;
+    color:#FF6B9A;
+}
+
+#question{
+    font-size:20px;
+    margin:20px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>論理表現Ⅰ 熟語クイズ</h1>
+
+<div id="startScreen" class="screen">
+    <h2>モードを選んでください</h2>
+    <button onclick="setMode('JE')">日本語 → 英語</button>
+    <button onclick="setMode('EJ')">英語 → 日本語</button>
+</div>
+
+<div id="sectionScreen" class="screen" style="display:none;">
+    <h2>セクションを選んでください</h2>
+    <button onclick="startQuiz(1)">セクション1（関係詞）</button>
+    <button onclick="startQuiz(2)">セクション2（仮定法）</button>
+</div>
+
+<div id="quizScreen" class="screen" style="display:none;">
+    <div id="timer">残り10秒</div>
+    <div id="question"></div>
+    <div id="choices"></div>
+</div>
+
+<div id="resultScreen" class="screen" style="display:none;">
+    <h2>結果</h2>
+    <p id="score"></p>
+    <button onclick="location.reload()">もう一度</button>
+</div>
+
+<script>
+
+let mode;
+let questions=[];
+let current=0;
+let score=0;
+let timer;
+let timeLeft=10;
+
+function setMode(selected){
+    mode=selected;
+    document.getElementById("startScreen").style.display="none";
+    document.getElementById("sectionScreen").style.display="block";
+}
+
+function startQuiz(section){
+    document.getElementById("sectionScreen").style.display="none";
+    document.getElementById("quizScreen").style.display="block";
+
+    if(section===1){
+        questions = [
+            makeQ("I will help <u>whoever</u> needs it.",
+                  "たとえ誰であっても","Whoever"),
+            makeQ("You can choose <u>whichever</u> you like.",
+                  "たとえどれであっても","Whichever"),
+            makeQ("Call me <u>whenever</u> you need help.",
+                  "たとえいつであっても","Whenever"),
+            makeQ("Go <u>wherever</u> you want.",
+                  "たとえどこであっても","Wherever"),
+            makeQ("<u>However</u> hard it is, try it.",
+                  "たとえどれくらい〜であっても","However")
+        ];
+    }
+
+    if(section===2){
+        questions = [
+            makeQ("He talks as if he <u>were</u> rich.",
+                  "まるで〜であるかのように","as if + 仮定法過去"),
+            makeQ("She looked as if she <u>had seen</u> a ghost.",
+                  "まるで〜であったかのように","as if + 仮定法過去完了"),
+            makeQ("<u>Should</u> you need help, call me.",
+                  "ifの省略（倒置）","Should S V"),
+            makeQ("If he were to win, I <u>would</u> be happy.",
+                  "仮に〜するとしたら","If 主語 were to"),
+            makeQ("<u>Without</u> your help, I couldn't succeed.",
+                  "〜がなければ","Without"),
+            makeQ("<u>But for</u> your advice, I would have failed.",
+                  "〜がなければ","But for"),
+            makeQ("It is <u>high time</u> you went to bed.",
+                  "〜する時間だ","high time")
+        ];
+    }
+
+    shuffle(questions);
+    showQuestion();
+}
+
+function makeQ(sentence, meaning, key){
+    return {sentence, meaning, key};
+}
+
+function showQuestion(){
+    if(current>=questions.length){
+        endQuiz();
+        return;
+    }
+
+    timeLeft=10;
+    document.getElementById("timer").textContent="残り10秒";
+
+    let q=questions[current];
+    document.getElementById("question").innerHTML=q.sentence;
+
+    let choices=[q.meaning];
+
+    let wrongPool=[
+        "たとえ誰であっても",
+        "たとえどこであっても",
+        "まるで〜であるかのように",
+        "〜がなければ",
+        "仮に〜するとしたら",
+        "〜する時間だ"
+    ];
+
+    wrongPool=wrongPool.filter(x=>x!==q.meaning);
+
+    // without と but for を同時に出さない処理
+    if(q.key==="Without"){
+        wrongPool=wrongPool.filter(x=>x!=="〜がなければ");
+    }
+    if(q.key==="But for"){
+        wrongPool=wrongPool.filter(x=>x!=="〜がなければ");
+    }
+
+    shuffle(wrongPool);
+    while(choices.length<4){
+        choices.push(wrongPool.pop());
+    }
+
+    shuffle(choices);
+
+    let choiceDiv=document.getElementById("choices");
+    choiceDiv.innerHTML="";
+
+    choices.forEach(c=>{
+        let btn=document.createElement("button");
+        btn.textContent=c;
+        btn.className="choice";
+        btn.onclick=()=>checkAnswer(c);
+        choiceDiv.appendChild(btn);
+    });
+
+    timer=setInterval(()=>{
+        timeLeft--;
+        document.getElementById("timer").textContent="残り"+timeLeft+"秒";
+        if(timeLeft===0){
+            clearInterval(timer);
+            current++;
+            showQuestion();
+        }
+    },1000);
+}
+
+function checkAnswer(answer){
+    clearInterval(timer);
+    if(answer===questions[current].meaning){
+        score++;
+    }
+    current++;
+    showQuestion();
+}
+
+function endQuiz(){
+    document.getElementById("quizScreen").style.display="none";
+    document.getElementById("resultScreen").style.display="block";
+    document.getElementById("score").textContent=
+        score+" / "+questions.length+" 問正解！";
+}
+
+function shuffle(array){
+    for(let i=array.length-1;i>0;i--){
+        let j=Math.floor(Math.random()*(i+1));
+        [array[i],array[j]]=[array[j],array[i]];
+    }
+}
+
+</script>
+</body>
+</html>
